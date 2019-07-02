@@ -113,6 +113,7 @@ void do_send(osjob_t* j) {
   { 
     if (gps.checkGpsFix())
     {
+      LMIC_setDrTxpow(DR_SF12,30)  ;
       // Prepare upstream data transmission at the next possible time.
       gps.buildPacket(txBuffer);
       
@@ -164,7 +165,7 @@ void setup() {
   LMIC.dn2Dr = DR_SF9;
 
   // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
-  LMIC_setDrTxpow(DR_SF7,14); 
+  LMIC_setDrTxpow(DR_SF7,30); 
 
   do_send(&sendjob);
   pinMode(BUILTIN_LED, OUTPUT);
