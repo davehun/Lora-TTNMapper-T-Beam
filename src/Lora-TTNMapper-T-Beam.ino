@@ -1,6 +1,8 @@
 #include <lmic.h>
 #include <hal/hal.h>
 #include <WiFi.h>
+#include "FS.h"
+#include "SPIFFS.h"
 
 // UPDATE the config.h file in the same folder WITH YOUR TTN KEYS AND ADDR.
 #include "config.h"
@@ -32,6 +34,54 @@ const lmic_pinmap lmic_pins = {
   .rst = LMIC_UNUSED_PIN, // was "14,"
   .dio = {26, 33, 32},
 };
+
+void writeFile(fs::FS &fs, const char * path, const char * message){
+    Serial.printf("Writing file: %s\r\n", path);
+
+    File file = fs.open(path, FILE_WRITE);
+    if(!file){
+        Serial.println("- failed to open file for writing");
+        return;
+    }
+    if(file.print(message)){
+        Serial.println("- file written");
+    } else {
+        Serial.println("- frite failed");
+    }
+}
+
+
+void writeFreamesUP() {
+
+    char cstr[16];
+    itoa(LMIC.seqnoUp , cstr, 10);
+    Serial.print("save frame: ");
+    Serial.println( cstr);
+    writeFile(SPIFFS, "/frames", cstr);
+}
+
+int readFile(fs::FS &fs, const char * path){
+    Serial.printf("Reading file: %s\r\n", path);
+
+    File file = fs.open(path);
+    if(!file || file.isDirectory()){
+        Serial.println("- failed to open file for reading");
+        return 0;
+    }
+
+    Serial.println("- read from file:");
+    while(file.available()){
+        return (file.parseInt());
+    }
+    return 0;
+}
+
+int readLastSeqNumber() {
+    int res = readFile(SPIFFS, "/frames");
+    Serial.print(" loaded frame: ");
+    Serial.println(res);
+    return res;
+}
 
 void onEvent (ev_t ev) {
   switch (ev) {
@@ -102,7 +152,7 @@ void onEvent (ev_t ev) {
   }
 }
 
-void do_send(osjob_t* j) {  
+void do_send(osjob_t* j) {
 
   // Check if there is not a current TX/RX job running
   if (LMIC.opmode & OP_TXRXPEND)
@@ -110,18 +160,19 @@ void do_send(osjob_t* j) {
     Serial.println(F("OP_TXRXPEND, not sending"));
   }
   else
-  { 
+  {
     if (gps.checkGpsFix())
     {
-      LMIC_setDrTxpow(DR_SF12,30)  ;
+
       // Prepare upstream data transmission at the next possible time.
       gps.buildPacket(txBuffer);
-      
+
        sprintf(s, "packet: %x %x %x %x %x %x %x %x %x ", txBuffer[0], txBuffer[1], txBuffer[2], txBuffer[3], txBuffer[4], txBuffer[5], txBuffer[6], txBuffer[7], txBuffer[8]);
       Serial.println(s);
       LMIC_setTxData2(1, txBuffer, sizeof(txBuffer), 0);
       Serial.println(F("Packet queued"));
       digitalWrite(BUILTIN_LED, HIGH);
+      writeFreamesUP();
     }
     else
     {
@@ -135,7 +186,8 @@ void do_send(osjob_t* j) {
 void setup() {
   Serial.begin(115200);
   Serial.println(F("TTN Mapper"));
-  
+  SPIFFS.begin();
+
   //Turn off WiFi and Bluetooth
   WiFi.mode(WIFI_OFF);
   btStop();
@@ -145,9 +197,16 @@ void setup() {
   os_init();
   // Reset the MAC state. Session and pending data transfers will be discarded.
   LMIC_reset();
-  
+
   LMIC_setSession (0x1, DEVADDR, NWKSKEY, APPSKEY);
-  
+  LMIC.seqnoUp = readLastSeqNumber();
+  if(LMIC.seqnoUp == 0)
+  {
+      SPIFFS.format();
+      writeFreamesUP();
+      //format the FS
+  }
+
   LMIC_setupChannel(0, 868100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
   LMIC_setupChannel(1, 868300000, DR_RANGE_MAP(DR_SF12, DR_SF7B), BAND_CENTI);      // g-band
   LMIC_setupChannel(2, 868500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
@@ -165,12 +224,12 @@ void setup() {
   LMIC.dn2Dr = DR_SF9;
 
   // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
-  LMIC_setDrTxpow(DR_SF7,30); 
+  LMIC_setDrTxpow(DR_SF7,30);
 
   do_send(&sendjob);
   pinMode(BUILTIN_LED, OUTPUT);
   digitalWrite(BUILTIN_LED, LOW);
-  
+
 }
 
 void loop() {
