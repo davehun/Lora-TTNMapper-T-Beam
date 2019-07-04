@@ -4,6 +4,8 @@
 #include "FS.h"
 #include "SPIFFS.h"
 
+#include "esp_sleep.h"
+
 // UPDATE the config.h file in the same folder WITH YOUR TTN KEYS AND ADDR.
 #include "config.h"
 #include "gps.h"
@@ -25,7 +27,7 @@ void os_getDevKey (u1_t* buf) { }
 
 static osjob_t sendjob;
 // Schedule TX every this many seconds (might become longer due to duty cycle limitations).
-const unsigned TX_INTERVAL = 30;
+const unsigned TX_INTERVAL = 120;
 
 // Pin mapping
 const lmic_pinmap lmic_pins = {
@@ -128,7 +130,9 @@ void onEvent (ev_t ev) {
         Serial.println(s);
       }
       // Schedule next transmission
-      os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+      esp_sleep_enable_timer_wakeup(TX_INTERVAL*1000000);
+      esp_deep_sleep_start();
+      do_send(&sendjob);
       break;
     case EV_LOST_TSYNC:
       Serial.println(F("EV_LOST_TSYNC"));
