@@ -128,6 +128,10 @@ void onEvent (ev_t ev) {
         Serial.println(s);
       }
       // Schedule next transmission
+  
+      sprintf(s, "Next transmission in %i seconds\n-----", TX_INTERVAL);
+      Serial.println(s);
+
       esp_sleep_enable_timer_wakeup(TX_INTERVAL*1000000);
       esp_deep_sleep_start();
       do_send(&sendjob);
