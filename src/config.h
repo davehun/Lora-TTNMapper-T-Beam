@@ -7,3 +7,5 @@ static u1_t PROGMEM APPSKEY[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x
 static const u4_t DEVADDR = 0x00000000 ; // LoRaWAN end-device address (DevAddr)
 
 
+
+const unsigned TX_INTERVAL = 120; // Schedule TX every this many seconds (might become longer due to duty cycle limitations).
