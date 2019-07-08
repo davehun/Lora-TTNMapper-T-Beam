@@ -26,8 +26,6 @@ void os_getDevEui (u1_t* buf) { }
 void os_getDevKey (u1_t* buf) { }
 
 static osjob_t sendjob;
-// Schedule TX every this many seconds (might become longer due to duty cycle limitations).
-const unsigned TX_INTERVAL = 120;
 
 // Pin mapping
 const lmic_pinmap lmic_pins = {
@@ -130,6 +128,10 @@ void onEvent (ev_t ev) {
         Serial.println(s);
       }
       // Schedule next transmission
+  
+      sprintf(s, "Next transmission in %i seconds\n-----", TX_INTERVAL);
+      Serial.println(s);
+
       esp_sleep_enable_timer_wakeup(TX_INTERVAL*1000000);
       esp_deep_sleep_start();
       do_send(&sendjob);

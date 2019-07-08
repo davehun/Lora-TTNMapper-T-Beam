@@ -36,6 +36,9 @@ void gps::buildPacket(uint8_t txBuffer[9])
   sprintf(t, "Lng: %f", tGps.location.lng());
   Serial.println(t);
 
+  sprintf(t, "Alti (m): %.2f", tGps.altitude.meters());
+  Serial.println(t);
+
   txBuffer[0] = ( LatitudeBinary >> 16 ) & 0xFF;
   txBuffer[1] = ( LatitudeBinary >> 8 ) & 0xFF;
   txBuffer[2] = LatitudeBinary & 0xFF;
